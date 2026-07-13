@@ -16,6 +16,8 @@
     --gold-soft: #F7F0DC;
     --warn: #8C1D40;          /* TU crimson, used for warnings */
     --warn-soft: #F6E7EB;
+    --good: #2F6B3A;          /* muted green, used for well-powered readouts */
+    --good-soft: #E8F1E9;
     --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
     --sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
     --serif: Georgia, 'Times New Roman', serif;
@@ -80,8 +82,10 @@
     display:flex; align-items:center; gap:16px; margin-top:6px; padding:14px 16px;
     background:var(--gold-soft); border-radius:2px; border-left:3px solid var(--gold);
   }
+  .power-readout.good{background:var(--good-soft); border-left-color:var(--good);}
   .power-readout.warn{background:var(--warn-soft); border-left-color:var(--warn);}
   .power-num{font-family:var(--mono); font-size:22px; font-weight:600; color:var(--accent); min-width:56px;}
+  .power-readout.good .power-num{color:var(--good);}
   .power-readout.warn .power-num{color:var(--warn);}
   .power-text{font-size:13px; color:var(--ink-soft); flex:1;}
   .power-list .power-readout{margin-bottom:8px;}
@@ -175,7 +179,7 @@
     </div>
 
     <div class="card" id="ivCard0">
-      <p class="card-title">Independent variable 1</p>
+      <p class="card-title" id="ivCard0Title">Independent variable</p>
       <div class="row">
         <div class="field">
           <label for="ivName0">Variable name</label>
@@ -239,7 +243,7 @@
     </div>
 
     <div class="card" id="dvCard0">
-      <p class="card-title">Measured variable 1</p>
+      <p class="card-title" id="dvCard0Title">Measured variable</p>
       <div class="row">
         <div class="field"><label for="dvName0">Variable name</label><input id="dvName0" value="Score" /></div>
         <div class="field"><label for="dvMin0">Range — min</label><input id="dvMin0" type="number" value="0" /></div>
@@ -413,12 +417,16 @@ function labelFromInput(id, fallback){
   const el = document.getElementById(id);
   return (el && el.value.trim()) || fallback;
 }
+// Only number the fallback name when there's a second DV to distinguish it from.
+function dvFallbackName(dvIdx, numDVs){
+  return numDVs === 2 ? `Measured variable ${dvIdx+1}` : 'Measured variable';
+}
 
 // The set of effects that apply for a given (design, numIVs) combo, using
 // the same internal keys Code.gs's validateSpec_ normalizes to. Labels use
 // whatever names the student has typed in so far.
 function getActiveEffects(dt, numIVs){
-  const iv1 = labelFromInput('ivName0', 'IV1');
+  const iv1 = labelFromInput('ivName0', numIVs === 2 ? 'IV1' : 'IV');
   const iv2 = labelFromInput('ivName1', 'IV2');
   const t1 = labelFromInput('time1Label', 'Time 1');
   const t2 = labelFromInput('time2Label', 'Time 2');
@@ -471,8 +479,12 @@ function updateVisibility(){
   document.getElementById('groupSectionHelp').textContent = dt === 'mixed'
     ? 'Think of the condition or category you\'re comparing — two teaching methods, two dosage levels, present vs. absent. This variable has exactly two levels. Since this is a mixed design, everyone is also measured at two time points (set up below) — that\'s the second factor.'
     : 'Think of the conditions or categories you\'re comparing — two teaching methods, two dosage levels, present vs. absent. Each variable has exactly two levels. With two independent variables you can also look for an interaction between them, not just their separate effects.';
-  document.getElementById('ivCard1').classList.toggle('visible', getNumIVs() === 2);
-  document.getElementById('dvCard1').classList.toggle('visible', getNumDVs() === 2);
+  const numIVs = getNumIVs(), numDVs = getNumDVs();
+  document.getElementById('ivCard1').classList.toggle('visible', numIVs === 2);
+  document.getElementById('dvCard1').classList.toggle('visible', numDVs === 2);
+  // Only number the cards when there's a second one to distinguish from.
+  document.getElementById('ivCard0Title').textContent = numIVs === 2 ? 'Independent variable 1' : 'Independent variable';
+  document.getElementById('dvCard0Title').textContent = numDVs === 2 ? 'Measured variable 1' : 'Measured variable';
   [0,1].forEach(i=>{
     const row = document.getElementById('dvConsistencyRow'+i);
     if(row) row.classList.toggle('visible', showTime);
@@ -493,8 +505,10 @@ document.getElementById('numDVs').addEventListener('change', updateVisibility);
   document.getElementById(id).addEventListener('input', updatePowerReadout);
 });
 
-function powerRowHTML(label, pct, warn, note){
-  return `<div class="power-readout ${warn ? 'warn':''}">
+// state: 'good' (well-powered), 'warn' (underpowered), or 'neutral' (e.g. no
+// effect predicted, so the test isn't the focus of the design).
+function powerRowHTML(label, pct, state, note){
+  return `<div class="power-readout ${state === 'neutral' ? '' : state}">
     <div class="power-num">${pct}%</div>
     <div class="power-text"><strong>${label}:</strong> ${note}</div>
   </div>`;
@@ -514,7 +528,7 @@ function renderEffectsPanel(){
 
   let html = '';
   for(let dvIdx=0; dvIdx<numDVs; dvIdx++){
-    const dvName = labelFromInput('dvName'+dvIdx, `Measured variable ${dvIdx+1}`);
+    const dvName = labelFromInput('dvName'+dvIdx, dvFallbackName(dvIdx, numDVs));
     html += `<p class="effects-dv-title">${dvName}</p><div class="row">`;
     effects.forEach(eff=>{
       const isInt = isInteractionKey(eff.key);
@@ -586,7 +600,7 @@ function updatePowerReadout(){
   const effects = getActiveEffects(dt, numIVs);
   let html = '';
   for(let dvIdx=0; dvIdx<numDVs; dvIdx++){
-    const dvName = labelFromInput('dvName'+dvIdx, `Measured variable ${dvIdx+1}`);
+    const dvName = labelFromInput('dvName'+dvIdx, dvFallbackName(dvIdx, numDVs));
     const consistencyEl = document.getElementById('dvConsistency'+dvIdx);
     const consistency = consistencyEl ? parseFloat(consistencyEl.value) : 0;
     html += `<p class="power-dv-title">${dvName}</p>`;
@@ -595,19 +609,19 @@ function updatePowerReadout(){
       if(!sel) return;
       const nominalD = parseFloat(sel.value);
       if(isInteractionKey(eff.key) && nominalD <= 0){
-        html += powerRowHTML(eff.label, 0, false, `No difference expected, so this test isn't the focus of the design.`);
+        html += powerRowHTML(eff.label, 0, 'neutral', `No difference expected, so this test isn't the focus of the design.`);
         return;
       }
       const result = computeEffectPower(dt, eff.key, nominalD, consistency, n);
       const pct = Math.round(result.power*100);
-      const warn = result.power < 0.80;
+      const isGood = result.power >= 0.80;
       const suggestedN = result.testType === 'paired'
         ? requiredNForPowerPaired(result.effD, 0.9)
         : requiredNForPowerTwoGroup(result.effD, 0.9);
-      const note = warn
-        ? `~${pct}% chance of detecting this — below the ~90% target. Consider n ≈ ${suggestedN}.`
-        : `~${pct}% chance of detecting this, close to the ~90% target.`;
-      html += powerRowHTML(eff.label, pct, warn, note);
+      const note = isGood
+        ? `~${pct}% chance of detecting this, close to the ~90% target.`
+        : `~${pct}% chance of detecting this — below the ~90% target. Consider n ≈ ${suggestedN}.`;
+      html += powerRowHTML(eff.label, pct, isGood ? 'good' : 'warn', note);
     });
   }
   list.innerHTML = html;
@@ -677,7 +691,7 @@ function buildSpec(){
     for(let i=0; i<numIVs; i++){
       const levelInputs = document.querySelectorAll(`#levelInputs${i} input`);
       ivs.push({
-        name: labelFromInput('ivName'+i, 'IV'+(i+1)),
+        name: labelFromInput('ivName'+i, numIVs === 2 ? 'IV'+(i+1) : 'IV'),
         levels: Array.from(levelInputs).map(inp => inp.value || 'Group')
       });
     }
@@ -691,7 +705,7 @@ function buildSpec(){
       effObj[eff.key] = sel ? parseFloat(sel.value) : 0;
     });
     dvs.push({
-      name: labelFromInput('dvName'+d, 'DV'+(d+1)),
+      name: labelFromInput('dvName'+d, dvFallbackName(d, numDVs)),
       min: parseFloat(document.getElementById('dvMin'+d).value),
       max: parseFloat(document.getElementById('dvMax'+d).value),
       mean: parseFloat(document.getElementById('dvMean'+d).value),
