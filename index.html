@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulab — Study Data Generator</title>
+<style>
+  :root{
+    --paper: #FAFAF8;
+    --ink: #1A1C22;
+    --ink-soft: #545A66;
+    --rule: #D9DCE2;
+    --accent: #002D6C;        /* TU royal blue */
+    --accent-soft: #E7EDF6;
+    --gold: #C8A951;          /* TU old gold */
+    --gold-soft: #F7F0DC;
+    --warn: #8C1D40;          /* TU crimson, used for warnings */
+    --warn-soft: #F6E7EB;
+    --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --serif: Georgia, 'Times New Roman', serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); line-height:1.5; padding:32px 20px 80px;
+  }
+  .wrap{max-width:900px; margin:0 auto;}
+  header{border-bottom:3px solid var(--accent); padding-bottom:16px; margin-bottom:28px; position:relative;}
+  header::after{content:""; position:absolute; left:0; bottom:-3px; width:64px; height:3px; background:var(--gold);}
+  header .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent);}
+  header h1{margin:6px 0 4px; font-family:var(--serif); font-size:32px; font-weight:700; letter-spacing:-0.01em; color:var(--accent);}
+  header p{margin:0; color:var(--ink-soft); font-size:14px; max-width:60ch;}
+
+  .panel{background:#fff; border:1px solid var(--rule); border-top:3px solid var(--accent); border-radius:2px; padding:22px 24px; margin-bottom:20px;}
+  .panel h2{
+    font-family:var(--serif); font-size:17px; font-weight:700;
+    color:var(--accent); margin:0 0 6px; display:flex; align-items:center; gap:10px;
+  }
+  .panel h2 .num{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:22px; height:22px; border-radius:50%; background:var(--accent); color:var(--gold);
+    font-family:var(--mono); font-size:12px; flex-shrink:0;
+  }
+  .section-help{
+    font-size:13px; color:var(--ink-soft); margin:0 0 18px; padding-bottom:14px;
+    border-bottom:1px solid var(--rule); max-width:70ch;
+  }
+
+  .row{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px;}
+  .field{flex:1; min-width:140px;}
+  .field label{display:block; font-size:12px; color:var(--ink-soft); margin-bottom:5px;}
+  .field input, .field select{
+    width:100%; padding:8px 10px; border:1px solid var(--rule); border-radius:2px;
+    font-family:var(--sans); font-size:14px; background:var(--paper); color:var(--ink);
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .field .hint{font-size:11.5px; color:var(--ink-soft); margin-top:4px;}
+
+  .levels-row{display:flex; gap:8px; margin-top:6px;}
+  .levels-row input{flex:1;}
+
+  .design-options{display:flex; gap:10px; flex-wrap:wrap;}
+  .design-option{
+    flex:1; min-width:180px; border:1px solid var(--rule); border-radius:2px; padding:12px 14px;
+    cursor:pointer; background:var(--paper);
+  }
+  .design-option input{margin-right:8px;}
+  .design-option.active{border-color:var(--accent); background:var(--accent-soft);}
+  .design-option .opt-title{font-weight:600; font-size:13.5px;}
+  .design-option .opt-desc{font-size:12px; color:var(--ink-soft); margin-top:3px;}
+
+  .subsection{display:none;}
+  .subsection.visible{display:block;}
+
+  .power-readout{
+    display:flex; align-items:center; gap:16px; margin-top:6px; padding:14px 16px;
+    background:var(--gold-soft); border-radius:2px; border-left:3px solid var(--gold);
+  }
+  .power-readout.warn{background:var(--warn-soft); border-left-color:var(--warn);}
+  .power-num{font-family:var(--mono); font-size:22px; font-weight:600; color:var(--accent); min-width:56px;}
+  .power-readout.warn .power-num{color:var(--warn);}
+  .power-text{font-size:13px; color:var(--ink-soft); flex:1;}
+  .power-list .power-readout{margin-bottom:8px;}
+
+  button{
+    font-family:var(--sans); font-size:14px; font-weight:600; padding:11px 20px;
+    border-radius:2px; border:none; cursor:pointer;
+  }
+  button:disabled{opacity:.55; cursor:not-allowed;}
+  .btn-primary{background:var(--accent); color:var(--gold);}
+  .btn-primary:hover:not(:disabled){background:#001F4D;}
+  .btn-ghost{background:transparent; color:var(--accent); border:1px solid var(--rule);}
+  .btn-ghost:hover:not(:disabled){border-color:var(--accent);}
+
+  table{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:13px; margin-top:12px;}
+  th,td{text-align:left; padding:6px 10px; border-bottom:1px solid var(--rule);}
+  th{color:var(--ink-soft); font-weight:600; text-transform:uppercase; font-size:11px; letter-spacing:.04em;}
+
+  .actions{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; align-items:center;}
+  .note{font-size:12.5px; color:var(--ink-soft); margin-top:10px;}
+  .badge{
+    display:inline-block; font-family:var(--mono); font-size:11px; padding:2px 7px;
+    border-radius:10px; background:var(--accent); color:var(--gold); margin-left:8px;
+  }
+
+  .status-msg{font-size:13px; padding:10px 14px; border-radius:2px; margin-top:12px; display:none;}
+  .status-msg.error{display:block; background:var(--warn-soft); color:var(--warn); border-left:3px solid var(--warn);}
+  .status-msg.info{display:block; background:var(--accent-soft); color:var(--accent); border-left:3px solid var(--accent);}
+  .status-msg.config{display:block; background:var(--warn-soft); color:var(--warn); border-left:3px solid var(--warn); font-family:var(--mono); font-size:12px;}
+
+  .dataset-id-callout{
+    margin-top:14px; padding:14px 16px; background:var(--accent-soft); border-radius:2px;
+    border-left:3px solid var(--accent); font-size:13px;
+  }
+  .dataset-id-callout code{
+    font-family:var(--mono); font-size:14px; font-weight:600; color:var(--accent);
+    background:#fff; padding:2px 8px; border-radius:2px; border:1px solid var(--rule);
+  }
+
+  footer{margin-top:32px; font-size:12px; color:var(--ink-soft); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Simulab</div>
+    <h1>Study Data Generator</h1>
+    <p>Design a simple study and generate your own dataset to analyze. Supports between-subjects, repeated-measures, and mixed designs. Datasets are generated on a server and are unique to you — this page never has access to the true effect sizes behind your data.</p>
+  </header>
+
+  <!-- STEP 0: Design type -->
+  <div class="panel">
+    <h2><span class="num">1</span>Study design</h2>
+    <p class="section-help">Are you comparing different people (between-subjects), the same people over time (repeated measures), or both at once (mixed)?</p>
+    <div class="design-options" id="designOptions">
+      <label class="design-option active" data-value="between">
+        <input type="radio" name="designType" value="between" checked />
+        <div class="opt-title">Between-subjects</div>
+        <div class="opt-desc">Different people in each group (e.g., control vs. treatment).</div>
+      </label>
+      <label class="design-option" data-value="repeated">
+        <input type="radio" name="designType" value="repeated" />
+        <div class="opt-title">Repeated measures</div>
+        <div class="opt-desc">Same people measured before and after.</div>
+      </label>
+      <label class="design-option" data-value="mixed">
+        <input type="radio" name="designType" value="mixed" />
+        <div class="opt-title">Mixed design</div>
+        <div class="opt-desc">Different groups, each measured before and after.</div>
+      </label>
+    </div>
+  </div>
+
+  <!-- STEP: Grouping variable -->
+  <div class="panel subsection visible" id="groupPanel">
+    <h2><span class="num">2</span>Your grouping variable (independent variable)</h2>
+    <p class="section-help">Think of the conditions or categories you're comparing — two teaching methods, two dosage levels, present vs. absent. Keep group labels short and make sure every participant fits into exactly one group.</p>
+    <div class="row">
+      <div class="field">
+        <label for="ivName">Variable name</label>
+        <input id="ivName" value="Condition" />
+      </div>
+      <div class="field" style="max-width:160px;">
+        <label for="ivLevels">Number of groups</label>
+        <select id="ivLevels">
+          <option value="2">2 groups</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Group labels</label>
+      <div class="levels-row" id="levelInputs">
+        <input value="Control" />
+        <input value="Treatment" />
+      </div>
+    </div>
+    <p class="note">This tool currently supports one two-level grouping variable and one measured variable.</p>
+  </div>
+
+  <!-- STEP: Repeated-measures structure -->
+  <div class="panel subsection" id="repeatedPanel">
+    <h2><span class="num">3</span>Repeated-measures structure</h2>
+    <p class="section-help">Name your two time points (e.g., Before/After, Pretest/Posttest), then estimate how consistent people tend to be relative to each other across that gap — that consistency is what makes a repeated-measures test more powerful than comparing two independent groups.</p>
+    <div class="row">
+      <div class="field">
+        <label for="time1Label">Time 1 label</label>
+        <input id="time1Label" value="Before" />
+      </div>
+      <div class="field">
+        <label for="time2Label">Time 2 label</label>
+        <input id="time2Label" value="After" />
+      </div>
+    </div>
+    <div class="field">
+      <label for="consistency">Consistency across time (test–retest correlation)</label>
+      <select id="consistency">
+        <option value="0.3">Low — people's rankings shuffle a lot (e.g., mood day-to-day)</option>
+        <option value="0.5" selected>Moderate — some stability, some change</option>
+        <option value="0.7">High — people who start high tend to stay relatively high (e.g., stable traits)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- STEP: Measured variable -->
+  <div class="panel">
+    <h2><span class="num">4</span>Your measured variable (dependent variable)</h2>
+    <p class="section-help">Base the range on the instrument itself (a 0–100 quiz, a 1–7 Likert scale); set the mean near the middle of that range unless you have a specific reason to expect otherwise. As a starting estimate, SD is often about a sixth of the full range — check a pilot study or published norms if you have one.</p>
+    <div class="row">
+      <div class="field">
+        <label for="dvName">Variable name</label>
+        <input id="dvName" value="Score" />
+      </div>
+      <div class="field">
+        <label for="dvMin">Range — min</label>
+        <input id="dvMin" type="number" value="0" />
+      </div>
+      <div class="field">
+        <label for="dvMax">Range — max</label>
+        <input id="dvMax" type="number" value="100" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="dvMean">Overall mean</label>
+        <input id="dvMean" type="number" value="50" />
+      </div>
+      <div class="field">
+        <label for="dvSD">Standard deviation</label>
+        <input id="dvSD" type="number" value="12" />
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP: Relationships + sample size -->
+  <div class="panel">
+    <h2><span class="num">5</span>Predicted relationships & sample size</h2>
+    <p class="section-help">Base your expected effect(s) on prior research or theory — weak effects are the norm in psychology, while strong ones usually only show up under tightly controlled manipulations. Adjust the sample size and watch the power estimates update to see how the two trade off.</p>
+
+    <div class="row subsection visible" id="groupEffectRow">
+      <div class="field">
+        <label for="groupStrength">Group difference</label>
+        <select id="groupStrength">
+          <option value="0.2">Weak</option>
+          <option value="0.5" selected>Moderate</option>
+          <option value="0.8">Strong</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row subsection" id="timeEffectRow">
+      <div class="field">
+        <label for="timeStrength">Change from Time 1 to Time 2</label>
+        <select id="timeStrength">
+          <option value="0.2">Weak</option>
+          <option value="0.5" selected>Moderate</option>
+          <option value="0.8">Strong</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row subsection" id="interactionEffectRow">
+      <div class="field">
+        <label for="interactionStrength">Does the change differ by group? (interaction)</label>
+        <select id="interactionStrength">
+          <option value="0">No — both groups change the same way</option>
+          <option value="0.2">Weak difference in change</option>
+          <option value="0.5" selected>Moderate difference in change</option>
+          <option value="0.8">Strong difference in change</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="nStudents">Total sample size (n)</label>
+        <input id="nStudents" type="number" value="60" />
+      </div>
+    </div>
+
+    <div id="powerList" class="power-list"></div>
+  </div>
+
+  <!-- STEP: Generate -->
+  <div class="panel">
+    <h2><span class="num">6</span>Generate your dataset</h2>
+    <p class="section-help">Your name/ID just needs to be unique to you and something you'll use consistently — a pseudonym is fine, as long as it's yours all semester (in case your instructor ever needs to look up your submission). Ask your instructor for the class password if you don't have it.</p>
+
+    <div class="row">
+      <div class="field">
+        <label for="studentName">Your name or a pseudonym</label>
+        <input id="studentName" placeholder="e.g., Jordan Lee, or a nickname" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="studentId">Your ID or a personal code</label>
+        <input id="studentId" placeholder="e.g., student ID, or any code you'll remember" autocomplete="off" />
+        <div class="hint">Doesn't have to be your real identity — just unique to you.</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="max-width:260px;">
+        <label for="classPassphrase">Class password</label>
+        <input id="classPassphrase" type="password" autocomplete="off" />
+      </div>
+    </div>
+
+    <div id="configWarning" class="status-msg config"></div>
+
+    <div class="actions">
+      <button class="btn-primary" id="generateBtn" onclick="generateData()">Generate my dataset</button>
+      <button class="btn-ghost" id="downloadBtn" onclick="downloadCSV()" disabled>Download CSV</button>
+    </div>
+    <div id="statusMsg" class="status-msg"></div>
+  </div>
+
+  <div class="panel" id="previewPanel" style="display:none;">
+    <h2>Preview <span class="badge" id="rowBadge"></span></h2>
+    <table id="previewTable"></table>
+    <p class="note">Showing first 10 of <span id="totalRows"></span> rows. Full dataset available via CSV download.</p>
+    <div class="dataset-id-callout">
+      Your dataset ID: <code id="datasetIdText"></code><br>
+      Write this on your submission — it's how your instructor identifies your dataset.
+    </div>
+  </div>
+
+  <footer>Simulab · data generated server-side, unique per submission</footer>
+
+</div>
+
+<script>
+/* ===================== CONFIG =====================
+   Paste the Apps Script Web App /exec URL here after deploying Code.gs.
+   (Deploy → Web app → "Execute as: Me" / "Who has access: Anyone" → copy the URL.)
+*/
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOf2vbvxc9mjBu-yA5Gkil1kJOhSlzU0POJlxjDY78rSneULou6z0re_tJwwgbAaXeKQ/exec";
+
+// Must match MIN_N / MAX_N in Code.gs.
+const MIN_N = 4;
+const MAX_N = 2000;
+
+let generatedColumns = null;
+let generatedRows = null;
+let generatedDatasetId = null;
+
+function erf(x){
+  const sign = x < 0 ? -1 : 1; x = Math.abs(x);
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const t = 1/(1+p*x);
+  const y = 1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
+  return sign*y;
+}
+function normCDF(z){ return 0.5*(1+erf(z/Math.sqrt(2))); }
+
+function labelForD(d){
+  if(d <= 0) return 'no';
+  if(d <= 0.2) return 'weak';
+  if(d <= 0.5) return 'moderate';
+  return 'strong';
+}
+
+// Power for a two-group comparison given an effect size (d) expressed
+// relative to the SD actually being compared.
+function computePowerTwoGroup(d, nPerGroup){
+  const zCrit = 1.959964; // two-tailed alpha = .05
+  const ncp = d*Math.sqrt(nPerGroup/2);
+  return normCDF(ncp - zCrit);
+}
+// Power for a paired (single-sample-on-differences) test.
+function computePowerPaired(dz, n){
+  const zCrit = 1.959964;
+  const ncp = dz*Math.sqrt(n);
+  return normCDF(ncp - zCrit);
+}
+function requiredNForPowerTwoGroup(d, targetPower){
+  const zCrit = 1.959964, zPow = 1.281552;
+  const nPer = 2*Math.pow(zCrit+zPow,2)/Math.pow(d,2);
+  return Math.ceil(nPer)*2;
+}
+function requiredNForPowerPaired(dz, targetPower){
+  const zCrit = 1.959964, zPow = 1.281552;
+  return Math.ceil(Math.pow((zCrit+zPow)/dz, 2));
+}
+
+function getDesignType(){
+  return document.querySelector('input[name="designType"]:checked').value;
+}
+
+function updateVisibility(){
+  const dt = getDesignType();
+  document.querySelectorAll('.design-option').forEach(el=>{
+    el.classList.toggle('active', el.dataset.value === dt);
+  });
+  const showGroup = (dt === 'between' || dt === 'mixed');
+  const showTime = (dt === 'repeated' || dt === 'mixed');
+  document.getElementById('groupPanel').classList.toggle('visible', showGroup);
+  document.getElementById('repeatedPanel').classList.toggle('visible', showTime);
+  document.getElementById('groupEffectRow').classList.toggle('visible', showGroup);
+  document.getElementById('timeEffectRow').classList.toggle('visible', showTime);
+  document.getElementById('interactionEffectRow').classList.toggle('visible', dt === 'mixed');
+  updatePowerReadout();
+}
+
+document.querySelectorAll('input[name="designType"]').forEach(r=>{
+  r.addEventListener('change', updateVisibility);
+});
+
+function powerRowHTML(label, pct, warn, note){
+  return `<div class="power-readout ${warn ? 'warn':''}">
+    <div class="power-num">${pct}%</div>
+    <div class="power-text"><strong>${label}:</strong> ${note}</div>
+  </div>`;
+}
+
+function updatePowerReadout(){
+  const dt = getDesignType();
+  const n = parseInt(document.getElementById('nStudents').value) || 0;
+  const consistency = parseFloat(document.getElementById('consistency').value);
+  const list = document.getElementById('powerList');
+  if(n < 4){ list.innerHTML = '<p class="note">Enter a sample size to see estimated power.</p>'; return; }
+
+  let html = '';
+  const numGroups = (dt === 'between' || dt === 'mixed') ? 2 : 1;
+  const nPerGroup = Math.floor(n/numGroups);
+
+  const groupD = parseFloat(document.getElementById('groupStrength').value);
+  const interactionD = dt === 'mixed' ? parseFloat(document.getElementById('interactionStrength').value) : 0;
+
+  if(dt === 'between'){
+    const power = computePowerTwoGroup(groupD, nPerGroup);
+    const pct = Math.round(power*100);
+    const warn = power < 0.80;
+    const note = warn
+      ? `~${pct}% chance of detecting this group difference — below the ~90% target. Consider n ≈ ${requiredNForPowerTwoGroup(groupD,0.9)} for a ${labelForD(groupD)} effect.`
+      : `~${pct}% chance of detecting this group difference, close to the ~90% target.`;
+    html += powerRowHTML('Group main effect', pct, warn, note);
+  } else if(dt === 'mixed'){
+    // Group main effect here is tested on each subject's average across both
+    // time points, whose SD is smaller than the raw DV's, and the interaction
+    // (if any) also shifts those subject means apart. Both push real power
+    // above what a naive between-subjects formula would predict — verified
+    // by simulation. d_eff standardizes the group+interaction contrast to
+    // the subject-mean SD: dvSD*sqrt((1+r)/2).
+    const dEff = (groupD + interactionD/2) * Math.sqrt(2/(1+consistency));
+    const power = computePowerTwoGroup(dEff, nPerGroup);
+    const pct = Math.round(power*100);
+    const warn = power < 0.80;
+    const note = warn
+      ? `~${pct}% chance of detecting this group difference — below the ~90% target. Try a larger n.`
+      : `~${pct}% chance of detecting this group difference, close to the ~90% target.`;
+    html += powerRowHTML('Group main effect', pct, warn, note);
+  }
+
+  if(dt === 'repeated' || dt === 'mixed'){
+    const d = parseFloat(document.getElementById('timeStrength').value);
+    const sdRatio = Math.sqrt(2*(1-consistency));
+    const dz = sdRatio > 0 ? d/sdRatio : 0;
+    const power = computePowerPaired(dz, n);
+    const pct = Math.round(power*100);
+    const warn = power < 0.80;
+    const note = warn
+      ? `~${pct}% chance of detecting this change over time — below the ~90% target. Consider n ≈ ${requiredNForPowerPaired(dz,0.9)} for a ${labelForD(d)} effect at this consistency level.`
+      : `~${pct}% chance of detecting this change over time, close to the ~90% target.`;
+    html += powerRowHTML('Time main effect', pct, warn, note);
+  }
+
+  if(dt === 'mixed'){
+    if(interactionD <= 0){
+      html += powerRowHTML('Group × Time interaction', 0, false, `No interaction expected — both groups predicted to change the same way, so this test isn't the focus of the design.`);
+    } else {
+      const sdRatio = Math.sqrt(2*(1-consistency));
+      const dIntStd = sdRatio > 0 ? interactionD/sdRatio : 0;
+      const power = computePowerTwoGroup(dIntStd, nPerGroup);
+      const pct = Math.round(power*100);
+      const warn = power < 0.80;
+      const note = warn
+        ? `~${pct}% chance of detecting that the two groups change differently — below the ~90% target. Consider a larger n or a stronger expected interaction.`
+        : `~${pct}% chance of detecting that the two groups change differently, close to the ~90% target.`;
+      html += powerRowHTML('Group × Time interaction', pct, warn, note);
+    }
+  }
+
+  list.innerHTML = html;
+}
+
+['groupStrength','timeStrength','interactionStrength','nStudents','consistency'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updatePowerReadout);
+});
+updateVisibility();
+
+// ===================== persistence (convenience only, not security) =====================
+function restoreIdentity(){
+  const name = localStorage.getItem('simulab_name');
+  const id = localStorage.getItem('simulab_id');
+  const pass = localStorage.getItem('simulab_passphrase');
+  if(name) document.getElementById('studentName').value = name;
+  if(id) document.getElementById('studentId').value = id;
+  if(pass) document.getElementById('classPassphrase').value = pass;
+}
+function saveIdentity(){
+  localStorage.setItem('simulab_name', document.getElementById('studentName').value.trim());
+  localStorage.setItem('simulab_id', document.getElementById('studentId').value.trim());
+  localStorage.setItem('simulab_passphrase', document.getElementById('classPassphrase').value);
+}
+restoreIdentity();
+
+// ===================== config check =====================
+function checkConfig(){
+  const el = document.getElementById('configWarning');
+  if(!SCRIPT_URL || SCRIPT_URL.indexOf('PASTE_YOUR') === 0){
+    el.textContent = 'Setup incomplete: the instructor hasn’t connected this page to the data server yet (SCRIPT_URL is not set in index.html).';
+    el.style.display = 'block';
+    document.getElementById('generateBtn').disabled = true;
+    return false;
+  }
+  el.style.display = 'none';
+  return true;
+}
+checkConfig();
+
+// ===================== client-side validation =====================
+function validateBeforeSubmit(spec){
+  if(!spec.student.name) return 'Enter your name or a pseudonym.';
+  if(!spec.student.id) return 'Enter your ID or a personal code.';
+  if(!spec.passphrase) return 'Enter the class password.';
+  if(!isFinite(spec.n) || spec.n < MIN_N || spec.n > MAX_N) return `Sample size must be between ${MIN_N} and ${MAX_N}.`;
+  if(!(spec.dv.max > spec.dv.min)) return 'DV range max must be greater than min.';
+  if(!(spec.dv.sd > 0)) return 'DV standard deviation must be positive.';
+  return null;
+}
+
+function showStatus(message, kind){
+  const el = document.getElementById('statusMsg');
+  el.className = 'status-msg ' + kind;
+  el.textContent = message;
+  el.style.display = message ? 'block' : 'none';
+}
+
+function buildSpec(){
+  const dt = getDesignType();
+  const levelInputs = document.querySelectorAll('#levelInputs input');
+  return {
+    passphrase: document.getElementById('classPassphrase').value,
+    student: {
+      name: document.getElementById('studentName').value.trim(),
+      id: document.getElementById('studentId').value.trim()
+    },
+    design: dt,
+    n: parseInt(document.getElementById('nStudents').value),
+    dv: {
+      name: document.getElementById('dvName').value || 'Score',
+      min: parseFloat(document.getElementById('dvMin').value),
+      max: parseFloat(document.getElementById('dvMax').value),
+      mean: parseFloat(document.getElementById('dvMean').value),
+      sd: parseFloat(document.getElementById('dvSD').value)
+    },
+    iv: {
+      name: document.getElementById('ivName').value || 'Group',
+      levels: Array.from(levelInputs).map(i=>i.value || 'Group')
+    },
+    repeated: {
+      t1: document.getElementById('time1Label').value || 'Time1',
+      t2: document.getElementById('time2Label').value || 'Time2',
+      consistency: parseFloat(document.getElementById('consistency').value)
+    },
+    effects: {
+      group: parseFloat(document.getElementById('groupStrength').value),
+      time: parseFloat(document.getElementById('timeStrength').value),
+      interaction: dt === 'mixed' ? parseFloat(document.getElementById('interactionStrength').value) : 0
+    }
+  };
+}
+
+async function generateData(){
+  if(!checkConfig()) return;
+  showStatus('', 'error');
+
+  const spec = buildSpec();
+  const validationError = validateBeforeSubmit(spec);
+  if(validationError){ showStatus(validationError, 'error'); return; }
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Generating…';
+
+  try{
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight, which Apps Script can't answer
+      body: JSON.stringify(spec)
+    });
+    if(!res.ok){
+      throw new Error(`Server returned HTTP ${res.status}.`);
+    }
+    const data = await res.json();
+    if(!data.ok){
+      showStatus(data.error || 'The server rejected the request.', 'error');
+      return;
+    }
+
+    saveIdentity();
+    generatedColumns = data.columns;
+    generatedRows = data.rows;
+    generatedDatasetId = data.datasetId;
+    renderPreview();
+  } catch(err){
+    showStatus('Could not reach the data server. Check your internet connection and try again. (' + err.message + ')', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+function renderPreview(){
+  const table = document.getElementById('previewTable');
+  const cols = generatedColumns;
+  table.innerHTML = '<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>' +
+    generatedRows.slice(0,10).map(r=>'<tr>'+cols.map(c=>`<td>${r[c]}</td>`).join('')+'</tr>').join('');
+  document.getElementById('previewPanel').style.display='block';
+  document.getElementById('rowBadge').textContent = `n = ${generatedRows.length}`;
+  document.getElementById('totalRows').textContent = generatedRows.length;
+  document.getElementById('datasetIdText').textContent = generatedDatasetId;
+  document.getElementById('downloadBtn').disabled = false;
+  document.getElementById('previewPanel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function downloadCSV(){
+  if(!generatedRows) return;
+  const cols = generatedColumns;
+  const csv = [cols.join(',')].concat(
+    generatedRows.map(r=>cols.map(c=>r[c]).join(','))
+  ).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `simulab_${generatedDatasetId || 'data'}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
