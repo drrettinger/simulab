@@ -73,6 +73,9 @@
   .subsection{display:none;}
   .subsection.visible{display:block;}
 
+  .card{border:1px solid var(--rule); border-radius:2px; padding:16px 18px; margin-bottom:14px; background:var(--paper);}
+  .card-title{font-weight:600; font-size:13.5px; color:var(--accent); margin:0 0 12px;}
+
   .power-readout{
     display:flex; align-items:center; gap:16px; margin-top:6px; padding:14px 16px;
     background:var(--gold-soft); border-radius:2px; border-left:3px solid var(--gold);
@@ -82,6 +85,11 @@
   .power-readout.warn .power-num{color:var(--warn);}
   .power-text{font-size:13px; color:var(--ink-soft); flex:1;}
   .power-list .power-readout{margin-bottom:8px;}
+  .power-dv-title, .effects-dv-title{
+    font-family:var(--serif); font-weight:700; font-size:14.5px; color:var(--accent);
+    margin:18px 0 8px; padding-top:10px; border-top:1px solid var(--rule);
+  }
+  .power-dv-title:first-child, .effects-dv-title:first-child{margin-top:0; padding-top:0; border-top:none;}
 
   button{
     font-family:var(--sans); font-size:14px; font-weight:600; padding:11px 20px;
@@ -127,7 +135,7 @@
   <header>
     <div class="eyebrow">Simulab</div>
     <h1>Study Data Generator</h1>
-    <p>Design a simple study and generate your own dataset to analyze. Supports between-subjects, repeated-measures, and mixed designs. Datasets are generated on a server and are unique to you — this page never has access to the true effect sizes behind your data.</p>
+    <p>Design a study — 1 or 2 independent variables, 1 or 2 measured variables — and generate your own dataset to analyze. Supports between-subjects, repeated-measures, and mixed designs. Datasets are generated on a server and are unique to you — this page never has access to the true effect sizes behind your data.</p>
   </header>
 
   <!-- STEP 0: Design type -->
@@ -153,36 +161,58 @@
     </div>
   </div>
 
-  <!-- STEP: Grouping variable -->
+  <!-- STEP: Independent variable(s) -->
   <div class="panel subsection visible" id="groupPanel">
-    <h2><span class="num">2</span>Your grouping variable (independent variable)</h2>
-    <p class="section-help">Think of the conditions or categories you're comparing — two teaching methods, two dosage levels, present vs. absent. Keep group labels short and make sure every participant fits into exactly one group.</p>
-    <div class="row">
+    <h2><span class="num">2</span>Independent variable(s)</h2>
+    <p class="section-help" id="groupSectionHelp">Think of the conditions or categories you're comparing — two teaching methods, two dosage levels, present vs. absent. Each variable has exactly two levels.</p>
+
+    <div class="field subsection" style="max-width:260px; margin-bottom:16px;" id="numIvField">
+      <label for="numIVs">Number of independent variables</label>
+      <select id="numIVs">
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+      </select>
+    </div>
+
+    <div class="card" id="ivCard0">
+      <p class="card-title">Independent variable 1</p>
+      <div class="row">
+        <div class="field">
+          <label for="ivName0">Variable name</label>
+          <input id="ivName0" value="Condition" />
+        </div>
+      </div>
       <div class="field">
-        <label for="ivName">Variable name</label>
-        <input id="ivName" value="Condition" />
-      </div>
-      <div class="field" style="max-width:160px;">
-        <label for="ivLevels">Number of groups</label>
-        <select id="ivLevels">
-          <option value="2">2 groups</option>
-        </select>
+        <label>Level labels</label>
+        <div class="levels-row" id="levelInputs0">
+          <input value="Control" />
+          <input value="Treatment" />
+        </div>
       </div>
     </div>
-    <div class="field">
-      <label>Group labels</label>
-      <div class="levels-row" id="levelInputs">
-        <input value="Control" />
-        <input value="Treatment" />
+
+    <div class="card subsection" id="ivCard1">
+      <p class="card-title">Independent variable 2</p>
+      <div class="row">
+        <div class="field">
+          <label for="ivName1">Variable name</label>
+          <input id="ivName1" value="Dosage" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Level labels</label>
+        <div class="levels-row" id="levelInputs1">
+          <input value="Low" />
+          <input value="High" />
+        </div>
       </div>
     </div>
-    <p class="note">This tool currently supports one two-level grouping variable and one measured variable.</p>
   </div>
 
   <!-- STEP: Repeated-measures structure -->
   <div class="panel subsection" id="repeatedPanel">
     <h2><span class="num">3</span>Repeated-measures structure</h2>
-    <p class="section-help">Name your two time points (e.g., Before/After, Pretest/Posttest), then estimate how consistent people tend to be relative to each other across that gap — that consistency is what makes a repeated-measures test more powerful than comparing two independent groups.</p>
+    <p class="section-help">Name your two time points (e.g., Before/After, Pretest/Posttest). You'll set how consistent people are across that gap separately for each measured variable below, since different measures can have different test–retest stability.</p>
     <div class="row">
       <div class="field">
         <label for="time1Label">Time 1 label</label>
@@ -193,42 +223,64 @@
         <input id="time2Label" value="After" />
       </div>
     </div>
-    <div class="field">
-      <label for="consistency">Consistency across time (test–retest correlation)</label>
-      <select id="consistency">
-        <option value="0.3">Low — people's rankings shuffle a lot (e.g., mood day-to-day)</option>
-        <option value="0.5" selected>Moderate — some stability, some change</option>
-        <option value="0.7">High — people who start high tend to stay relatively high (e.g., stable traits)</option>
-      </select>
-    </div>
   </div>
 
-  <!-- STEP: Measured variable -->
+  <!-- STEP: Measured variable(s) -->
   <div class="panel">
-    <h2><span class="num">4</span>Your measured variable (dependent variable)</h2>
+    <h2><span class="num">4</span>Measured variable(s)</h2>
     <p class="section-help">Base the range on the instrument itself (a 0–100 quiz, a 1–7 Likert scale); set the mean near the middle of that range unless you have a specific reason to expect otherwise. As a starting estimate, SD is often about a sixth of the full range — check a pilot study or published norms if you have one.</p>
-    <div class="row">
-      <div class="field">
-        <label for="dvName">Variable name</label>
-        <input id="dvName" value="Score" />
+
+    <div class="field" style="max-width:260px; margin-bottom:16px;">
+      <label for="numDVs">Number of measured variables</label>
+      <select id="numDVs">
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+      </select>
+    </div>
+
+    <div class="card" id="dvCard0">
+      <p class="card-title">Measured variable 1</p>
+      <div class="row">
+        <div class="field"><label for="dvName0">Variable name</label><input id="dvName0" value="Score" /></div>
+        <div class="field"><label for="dvMin0">Range — min</label><input id="dvMin0" type="number" value="0" /></div>
+        <div class="field"><label for="dvMax0">Range — max</label><input id="dvMax0" type="number" value="100" /></div>
       </div>
-      <div class="field">
-        <label for="dvMin">Range — min</label>
-        <input id="dvMin" type="number" value="0" />
+      <div class="row">
+        <div class="field"><label for="dvMean0">Overall mean</label><input id="dvMean0" type="number" value="50" /></div>
+        <div class="field"><label for="dvSD0">Standard deviation</label><input id="dvSD0" type="number" value="12" /></div>
       </div>
-      <div class="field">
-        <label for="dvMax">Range — max</label>
-        <input id="dvMax" type="number" value="100" />
+      <div class="row subsection" id="dvConsistencyRow0">
+        <div class="field">
+          <label for="dvConsistency0">Consistency across time (test–retest correlation)</label>
+          <select id="dvConsistency0">
+            <option value="0.3">Low — people's rankings shuffle a lot (e.g., mood day-to-day)</option>
+            <option value="0.5" selected>Moderate — some stability, some change</option>
+            <option value="0.7">High — people who start high tend to stay relatively high</option>
+          </select>
+        </div>
       </div>
     </div>
-    <div class="row">
-      <div class="field">
-        <label for="dvMean">Overall mean</label>
-        <input id="dvMean" type="number" value="50" />
+
+    <div class="card subsection" id="dvCard1">
+      <p class="card-title">Measured variable 2</p>
+      <div class="row">
+        <div class="field"><label for="dvName1">Variable name</label><input id="dvName1" value="Mood" /></div>
+        <div class="field"><label for="dvMin1">Range — min</label><input id="dvMin1" type="number" value="1" /></div>
+        <div class="field"><label for="dvMax1">Range — max</label><input id="dvMax1" type="number" value="7" /></div>
       </div>
-      <div class="field">
-        <label for="dvSD">Standard deviation</label>
-        <input id="dvSD" type="number" value="12" />
+      <div class="row">
+        <div class="field"><label for="dvMean1">Overall mean</label><input id="dvMean1" type="number" value="4" /></div>
+        <div class="field"><label for="dvSD1">Standard deviation</label><input id="dvSD1" type="number" value="1" /></div>
+      </div>
+      <div class="row subsection" id="dvConsistencyRow1">
+        <div class="field">
+          <label for="dvConsistency1">Consistency across time (test–retest correlation)</label>
+          <select id="dvConsistency1">
+            <option value="0.3">Low — people's rankings shuffle a lot (e.g., mood day-to-day)</option>
+            <option value="0.5" selected>Moderate — some stability, some change</option>
+            <option value="0.7">High — people who start high tend to stay relatively high</option>
+          </select>
+        </div>
       </div>
     </div>
   </div>
@@ -238,39 +290,7 @@
     <h2><span class="num">5</span>Predicted relationships & sample size</h2>
     <p class="section-help">Base your expected effect(s) on prior research or theory — weak effects are the norm in psychology, while strong ones usually only show up under tightly controlled manipulations. Adjust the sample size and watch the power estimates update to see how the two trade off.</p>
 
-    <div class="row subsection visible" id="groupEffectRow">
-      <div class="field">
-        <label for="groupStrength">Group difference</label>
-        <select id="groupStrength">
-          <option value="0.2">Weak</option>
-          <option value="0.5" selected>Moderate</option>
-          <option value="0.8">Strong</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="row subsection" id="timeEffectRow">
-      <div class="field">
-        <label for="timeStrength">Change from Time 1 to Time 2</label>
-        <select id="timeStrength">
-          <option value="0.2">Weak</option>
-          <option value="0.5" selected>Moderate</option>
-          <option value="0.8">Strong</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="row subsection" id="interactionEffectRow">
-      <div class="field">
-        <label for="interactionStrength">Does the change differ by group? (interaction)</label>
-        <select id="interactionStrength">
-          <option value="0">No — both groups change the same way</option>
-          <option value="0.2">Weak difference in change</option>
-          <option value="0.5" selected>Moderate difference in change</option>
-          <option value="0.8">Strong difference in change</option>
-        </select>
-      </div>
-    </div>
+    <div id="effectsContainer"></div>
 
     <div class="row">
       <div class="field">
@@ -352,13 +372,6 @@ function erf(x){
 }
 function normCDF(z){ return 0.5*(1+erf(z/Math.sqrt(2))); }
 
-function labelForD(d){
-  if(d <= 0) return 'no';
-  if(d <= 0.2) return 'weak';
-  if(d <= 0.5) return 'moderate';
-  return 'strong';
-}
-
 // Power for a two-group comparison given an effect size (d) expressed
 // relative to the SD actually being compared.
 function computePowerTwoGroup(d, nPerGroup){
@@ -385,6 +398,64 @@ function requiredNForPowerPaired(dz, targetPower){
 function getDesignType(){
   return document.querySelector('input[name="designType"]:checked').value;
 }
+// 2 independent variables are only offered for a pure between-subjects
+// design (a 2x2 factorial). A mixed design always has exactly 1
+// between-subjects IV crossed with time -- that's already "2 factors,"
+// just not framed as a 2-IV choice -- so it's forced to 1 here regardless
+// of the (hidden, in that case) dropdown's stored value.
+function getNumIVs(){
+  if(getDesignType() !== 'between') return 1;
+  return parseInt(document.getElementById('numIVs').value);
+}
+function getNumDVs(){ return parseInt(document.getElementById('numDVs').value); }
+
+function labelFromInput(id, fallback){
+  const el = document.getElementById(id);
+  return (el && el.value.trim()) || fallback;
+}
+
+// The set of effects that apply for a given (design, numIVs) combo, using
+// the same internal keys Code.gs's validateSpec_ normalizes to. Labels use
+// whatever names the student has typed in so far.
+function getActiveEffects(dt, numIVs){
+  const iv1 = labelFromInput('ivName0', 'IV1');
+  const iv2 = labelFromInput('ivName1', 'IV2');
+  const t1 = labelFromInput('time1Label', 'Time 1');
+  const t2 = labelFromInput('time2Label', 'Time 2');
+  const timeLabel = `Change from ${t1} to ${t2}`;
+
+  if(dt === 'between'){
+    if(numIVs === 1) return [{key:'main', label: `${iv1} difference`}];
+    return [
+      {key:'mainA', label: `${iv1} main effect`},
+      {key:'mainB', label: `${iv2} main effect`},
+      {key:'interactionAB', label: `${iv1} × ${iv2} interaction`}
+    ];
+  }
+  if(dt === 'repeated'){
+    return [{key:'time', label: timeLabel}];
+  }
+  // mixed
+  if(numIVs === 1){
+    return [
+      {key:'group', label: `${iv1} difference`},
+      {key:'time', label: timeLabel},
+      {key:'interaction', label: `${iv1} × Time interaction`}
+    ];
+  }
+  return [
+    {key:'mainA', label: `${iv1} main effect`},
+    {key:'mainB', label: `${iv2} main effect`},
+    {key:'time', label: timeLabel},
+    {key:'interactionAB', label: `${iv1} × ${iv2} interaction`},
+    {key:'interactionAT', label: `${iv1} × Time interaction`},
+    {key:'interactionBT', label: `${iv2} × Time interaction`},
+    {key:'interactionABT', label: `${iv1} × ${iv2} × Time interaction`}
+  ];
+}
+function isInteractionKey(key){
+  return key === 'interaction' || key.indexOf('interaction') === 0;
+}
 
 function updateVisibility(){
   const dt = getDesignType();
@@ -395,14 +466,31 @@ function updateVisibility(){
   const showTime = (dt === 'repeated' || dt === 'mixed');
   document.getElementById('groupPanel').classList.toggle('visible', showGroup);
   document.getElementById('repeatedPanel').classList.toggle('visible', showTime);
-  document.getElementById('groupEffectRow').classList.toggle('visible', showGroup);
-  document.getElementById('timeEffectRow').classList.toggle('visible', showTime);
-  document.getElementById('interactionEffectRow').classList.toggle('visible', dt === 'mixed');
-  updatePowerReadout();
+
+  document.getElementById('numIvField').classList.toggle('visible', dt === 'between');
+  document.getElementById('groupSectionHelp').textContent = dt === 'mixed'
+    ? 'Think of the condition or category you\'re comparing — two teaching methods, two dosage levels, present vs. absent. This variable has exactly two levels. Since this is a mixed design, everyone is also measured at two time points (set up below) — that\'s the second factor.'
+    : 'Think of the conditions or categories you\'re comparing — two teaching methods, two dosage levels, present vs. absent. Each variable has exactly two levels. With two independent variables you can also look for an interaction between them, not just their separate effects.';
+  document.getElementById('ivCard1').classList.toggle('visible', getNumIVs() === 2);
+  document.getElementById('dvCard1').classList.toggle('visible', getNumDVs() === 2);
+  [0,1].forEach(i=>{
+    const row = document.getElementById('dvConsistencyRow'+i);
+    if(row) row.classList.toggle('visible', showTime);
+  });
+
+  renderEffectsPanel();
 }
 
 document.querySelectorAll('input[name="designType"]').forEach(r=>{
   r.addEventListener('change', updateVisibility);
+});
+document.getElementById('numIVs').addEventListener('change', updateVisibility);
+document.getElementById('numDVs').addEventListener('change', updateVisibility);
+['ivName0','ivName1','time1Label','time2Label','dvName0','dvName1'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', renderEffectsPanel);
+});
+['dvConsistency0','dvConsistency1','nStudents'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updatePowerReadout);
 });
 
 function powerRowHTML(label, pct, warn, note){
@@ -412,80 +500,119 @@ function powerRowHTML(label, pct, warn, note){
   </div>`;
 }
 
+// Renders the per-DV effect-size dropdowns for the current design/IV count,
+// preserving any values the student already picked (keyed by dvIndex+effect
+// key, which stays stable across re-renders even when labels change).
+function renderEffectsPanel(){
+  const dt = getDesignType();
+  const numIVs = getNumIVs();
+  const numDVs = getNumDVs();
+  const effects = getActiveEffects(dt, numIVs);
+
+  const preserved = {};
+  document.querySelectorAll('#effectsContainer select').forEach(s => { preserved[s.id] = s.value; });
+
+  let html = '';
+  for(let dvIdx=0; dvIdx<numDVs; dvIdx++){
+    const dvName = labelFromInput('dvName'+dvIdx, `Measured variable ${dvIdx+1}`);
+    html += `<p class="effects-dv-title">${dvName}</p><div class="row">`;
+    effects.forEach(eff=>{
+      const isInt = isInteractionKey(eff.key);
+      const id = `eff_dv${dvIdx}_${eff.key}`;
+      html += `<div class="field">
+        <label for="${id}">${eff.label}</label>
+        <select id="${id}">
+          ${isInt ? '<option value="0">No difference expected</option>' : ''}
+          <option value="0.2">Weak</option>
+          <option value="0.5" selected>Moderate</option>
+          <option value="0.8">Strong</option>
+        </select>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  const container = document.getElementById('effectsContainer');
+  container.innerHTML = html;
+  Object.keys(preserved).forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = preserved[id];
+  });
+  container.querySelectorAll('select').forEach(s => s.addEventListener('input', updatePowerReadout));
+  updatePowerReadout();
+}
+
+// Effects tested on subject-means (averaged across time) rather than raw
+// scores or difference scores, whenever a design also has a time factor.
+// These need the sqrt(2/(1+r)) correction, verified by simulation: with the
+// symmetric interaction coding this tool uses, main effects and interactions
+// end up fully orthogonal, so no extra interaction term is needed here
+// (unlike some textbook treatments of confounded designs).
+function isSubjectMeanEffect(dt, key){
+  return dt === 'mixed' && (key === 'group' || key === 'mainA' || key === 'mainB' || key === 'interactionAB');
+}
+// Interaction effects involving time, tested on difference scores via a
+// two-group comparison (not the single "time main effect" paired test).
+function isDiffBasedTwoGroup(dt, key){
+  return dt === 'mixed' && (key === 'interaction' || key === 'interactionAT' || key === 'interactionBT' || key === 'interactionABT');
+}
+
+function computeEffectPower(dt, key, nominalD, consistency, n){
+  const nPerGroup = Math.floor(n/2); // every two-group test in this tool pools to n/2, whether a plain 2-group split or two pooled cells out of four
+  if(key === 'time'){
+    const sdRatio = Math.sqrt(2*(1-consistency));
+    const dz = sdRatio > 0 ? nominalD/sdRatio : 0;
+    return { power: computePowerPaired(dz, n), effD: dz, testType: 'paired' };
+  }
+  if(isDiffBasedTwoGroup(dt, key)){
+    const sdRatio = Math.sqrt(2*(1-consistency));
+    const d = sdRatio > 0 ? nominalD/sdRatio : 0;
+    return { power: computePowerTwoGroup(d, nPerGroup), effD: d, testType: 'twoGroup' };
+  }
+  if(isSubjectMeanEffect(dt, key)){
+    const d = nominalD*Math.sqrt(2/(1+consistency));
+    return { power: computePowerTwoGroup(d, nPerGroup), effD: d, testType: 'twoGroup' };
+  }
+  return { power: computePowerTwoGroup(nominalD, nPerGroup), effD: nominalD, testType: 'twoGroup' };
+}
+
 function updatePowerReadout(){
   const dt = getDesignType();
+  const numIVs = getNumIVs();
+  const numDVs = getNumDVs();
   const n = parseInt(document.getElementById('nStudents').value) || 0;
-  const consistency = parseFloat(document.getElementById('consistency').value);
   const list = document.getElementById('powerList');
   if(n < 4){ list.innerHTML = '<p class="note">Enter a sample size to see estimated power.</p>'; return; }
 
+  const effects = getActiveEffects(dt, numIVs);
   let html = '';
-  const numGroups = (dt === 'between' || dt === 'mixed') ? 2 : 1;
-  const nPerGroup = Math.floor(n/numGroups);
-
-  const groupD = parseFloat(document.getElementById('groupStrength').value);
-  const interactionD = dt === 'mixed' ? parseFloat(document.getElementById('interactionStrength').value) : 0;
-
-  if(dt === 'between'){
-    const power = computePowerTwoGroup(groupD, nPerGroup);
-    const pct = Math.round(power*100);
-    const warn = power < 0.80;
-    const note = warn
-      ? `~${pct}% chance of detecting this group difference — below the ~90% target. Consider n ≈ ${requiredNForPowerTwoGroup(groupD,0.9)} for a ${labelForD(groupD)} effect.`
-      : `~${pct}% chance of detecting this group difference, close to the ~90% target.`;
-    html += powerRowHTML('Group main effect', pct, warn, note);
-  } else if(dt === 'mixed'){
-    // Group main effect here is tested on each subject's average across both
-    // time points, whose SD is smaller than the raw DV's, and the interaction
-    // (if any) also shifts those subject means apart. Both push real power
-    // above what a naive between-subjects formula would predict — verified
-    // by simulation. d_eff standardizes the group+interaction contrast to
-    // the subject-mean SD: dvSD*sqrt((1+r)/2).
-    const dEff = (groupD + interactionD/2) * Math.sqrt(2/(1+consistency));
-    const power = computePowerTwoGroup(dEff, nPerGroup);
-    const pct = Math.round(power*100);
-    const warn = power < 0.80;
-    const note = warn
-      ? `~${pct}% chance of detecting this group difference — below the ~90% target. Try a larger n.`
-      : `~${pct}% chance of detecting this group difference, close to the ~90% target.`;
-    html += powerRowHTML('Group main effect', pct, warn, note);
-  }
-
-  if(dt === 'repeated' || dt === 'mixed'){
-    const d = parseFloat(document.getElementById('timeStrength').value);
-    const sdRatio = Math.sqrt(2*(1-consistency));
-    const dz = sdRatio > 0 ? d/sdRatio : 0;
-    const power = computePowerPaired(dz, n);
-    const pct = Math.round(power*100);
-    const warn = power < 0.80;
-    const note = warn
-      ? `~${pct}% chance of detecting this change over time — below the ~90% target. Consider n ≈ ${requiredNForPowerPaired(dz,0.9)} for a ${labelForD(d)} effect at this consistency level.`
-      : `~${pct}% chance of detecting this change over time, close to the ~90% target.`;
-    html += powerRowHTML('Time main effect', pct, warn, note);
-  }
-
-  if(dt === 'mixed'){
-    if(interactionD <= 0){
-      html += powerRowHTML('Group × Time interaction', 0, false, `No interaction expected — both groups predicted to change the same way, so this test isn't the focus of the design.`);
-    } else {
-      const sdRatio = Math.sqrt(2*(1-consistency));
-      const dIntStd = sdRatio > 0 ? interactionD/sdRatio : 0;
-      const power = computePowerTwoGroup(dIntStd, nPerGroup);
-      const pct = Math.round(power*100);
-      const warn = power < 0.80;
+  for(let dvIdx=0; dvIdx<numDVs; dvIdx++){
+    const dvName = labelFromInput('dvName'+dvIdx, `Measured variable ${dvIdx+1}`);
+    const consistencyEl = document.getElementById('dvConsistency'+dvIdx);
+    const consistency = consistencyEl ? parseFloat(consistencyEl.value) : 0;
+    html += `<p class="power-dv-title">${dvName}</p>`;
+    effects.forEach(eff=>{
+      const sel = document.getElementById(`eff_dv${dvIdx}_${eff.key}`);
+      if(!sel) return;
+      const nominalD = parseFloat(sel.value);
+      if(isInteractionKey(eff.key) && nominalD <= 0){
+        html += powerRowHTML(eff.label, 0, false, `No difference expected, so this test isn't the focus of the design.`);
+        return;
+      }
+      const result = computeEffectPower(dt, eff.key, nominalD, consistency, n);
+      const pct = Math.round(result.power*100);
+      const warn = result.power < 0.80;
+      const suggestedN = result.testType === 'paired'
+        ? requiredNForPowerPaired(result.effD, 0.9)
+        : requiredNForPowerTwoGroup(result.effD, 0.9);
       const note = warn
-        ? `~${pct}% chance of detecting that the two groups change differently — below the ~90% target. Consider a larger n or a stronger expected interaction.`
-        : `~${pct}% chance of detecting that the two groups change differently, close to the ~90% target.`;
-      html += powerRowHTML('Group × Time interaction', pct, warn, note);
-    }
+        ? `~${pct}% chance of detecting this — below the ~90% target. Consider n ≈ ${suggestedN}.`
+        : `~${pct}% chance of detecting this, close to the ~90% target.`;
+      html += powerRowHTML(eff.label, pct, warn, note);
+    });
   }
-
   list.innerHTML = html;
 }
 
-['groupStrength','timeStrength','interactionStrength','nStudents','consistency'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', updatePowerReadout);
-});
 updateVisibility();
 
 // ===================== persistence (convenience only, not security) =====================
@@ -524,8 +651,10 @@ function validateBeforeSubmit(spec){
   if(!spec.student.id) return 'Enter your ID or a personal code.';
   if(!spec.passphrase) return 'Enter the class password.';
   if(!isFinite(spec.n) || spec.n < MIN_N || spec.n > MAX_N) return `Sample size must be between ${MIN_N} and ${MAX_N}.`;
-  if(!(spec.dv.max > spec.dv.min)) return 'DV range max must be greater than min.';
-  if(!(spec.dv.sd > 0)) return 'DV standard deviation must be positive.';
+  for(const dv of spec.dvs){
+    if(!(dv.max > dv.min)) return `"${dv.name}" range max must be greater than min.`;
+    if(!(dv.sd > 0)) return `"${dv.name}" standard deviation must be positive.`;
+  }
   return null;
 }
 
@@ -538,7 +667,40 @@ function showStatus(message, kind){
 
 function buildSpec(){
   const dt = getDesignType();
-  const levelInputs = document.querySelectorAll('#levelInputs input');
+  const numIVs = getNumIVs();
+  const numDVs = getNumDVs();
+  const hasTime = (dt === 'repeated' || dt === 'mixed');
+  const effects = getActiveEffects(dt, numIVs);
+
+  const ivs = [];
+  if(dt !== 'repeated'){
+    for(let i=0; i<numIVs; i++){
+      const levelInputs = document.querySelectorAll(`#levelInputs${i} input`);
+      ivs.push({
+        name: labelFromInput('ivName'+i, 'IV'+(i+1)),
+        levels: Array.from(levelInputs).map(inp => inp.value || 'Group')
+      });
+    }
+  }
+
+  const dvs = [];
+  for(let d=0; d<numDVs; d++){
+    const effObj = {};
+    effects.forEach(eff=>{
+      const sel = document.getElementById(`eff_dv${d}_${eff.key}`);
+      effObj[eff.key] = sel ? parseFloat(sel.value) : 0;
+    });
+    dvs.push({
+      name: labelFromInput('dvName'+d, 'DV'+(d+1)),
+      min: parseFloat(document.getElementById('dvMin'+d).value),
+      max: parseFloat(document.getElementById('dvMax'+d).value),
+      mean: parseFloat(document.getElementById('dvMean'+d).value),
+      sd: parseFloat(document.getElementById('dvSD'+d).value),
+      consistency: hasTime ? parseFloat(document.getElementById('dvConsistency'+d).value) : 0,
+      effects: effObj
+    });
+  }
+
   return {
     passphrase: document.getElementById('classPassphrase').value,
     student: {
@@ -547,27 +709,12 @@ function buildSpec(){
     },
     design: dt,
     n: parseInt(document.getElementById('nStudents').value),
-    dv: {
-      name: document.getElementById('dvName').value || 'Score',
-      min: parseFloat(document.getElementById('dvMin').value),
-      max: parseFloat(document.getElementById('dvMax').value),
-      mean: parseFloat(document.getElementById('dvMean').value),
-      sd: parseFloat(document.getElementById('dvSD').value)
-    },
-    iv: {
-      name: document.getElementById('ivName').value || 'Group',
-      levels: Array.from(levelInputs).map(i=>i.value || 'Group')
-    },
+    ivs: ivs,
     repeated: {
-      t1: document.getElementById('time1Label').value || 'Time1',
-      t2: document.getElementById('time2Label').value || 'Time2',
-      consistency: parseFloat(document.getElementById('consistency').value)
+      t1: labelFromInput('time1Label', 'Time1'),
+      t2: labelFromInput('time2Label', 'Time2')
     },
-    effects: {
-      group: parseFloat(document.getElementById('groupStrength').value),
-      time: parseFloat(document.getElementById('timeStrength').value),
-      interaction: dt === 'mixed' ? parseFloat(document.getElementById('interactionStrength').value) : 0
-    }
+    dvs: dvs
   };
 }
 
